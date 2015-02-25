@@ -2,7 +2,7 @@ use libc;
 use libc::{c_int, c_void, timespec};
 
 use std::mem::transmute;
-use std::ptr::null;
+use std::ptr::{null, null_mut};
 use std::result::Result;
 
 pub enum Errors {
@@ -74,7 +74,7 @@ pub fn wait(addr: &mut i32, val: i32) -> Result<i32, Errors> {
                   OP_WAIT,
                   val,
                   null::<timespec>(),
-                  transmute(null::<i32>()),
+                  null_mut::<i32>(),
                   0))
     }
 }
@@ -106,7 +106,7 @@ pub fn wake(addr: &mut i32, nprocs: u32) -> Result<i32, Errors> {
               OP_WAKE,
               nprocs as i32,
               null::<timespec>(),
-              transmute(null::<i32>()),
+              null_mut::<i32>(),
               0)
     };
 
@@ -121,11 +121,11 @@ pub fn wake(addr: &mut i32, nprocs: u32) -> Result<i32, Errors> {
 /// TODO: explain val.
 pub fn requeue(addr: &mut i32, requeue_addr: &mut i32, val: i32, nprocs: u32) -> Result<i32, Errors> {
     let ret = unsafe {
-        futex(addr as (*mut i32),
+        futex(addr as *mut i32,
               OP_CMP_REQUEUE,
               nprocs as i32,
               null::<timespec>(),
-              transmute(requeue_addr),
+              requeue_addr as *mut i32,
               val)
     };
 
