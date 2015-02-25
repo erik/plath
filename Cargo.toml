@@ -3,3 +3,6 @@
 name = "plath"
 version = "0.0.1"
 authors = ["Erik Price <spam@erikprice.net>"]
+
+[dependencies]
+syscall = "0.1.0"
