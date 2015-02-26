@@ -69,17 +69,17 @@ mod op {
 /// Verifies that the futex in `addr` still contains the value `val`, and then
 /// sleeps the thread awaiting a FUTEX_WAKE.
 pub fn wait(addr: &mut i32, val: i32) -> Result<i32, Errors> {
-    unsafe {
-        get_result(
-            futex(addr as (*mut i32),
-                  op::WAIT,
-                  val,
-                  ptr::null::<timespec>(),
-                  ptr::null_mut(),
-                  0))
-    }
-}
+    let ret = unsafe {
+        futex(addr as (*mut i32),
+              op::WAIT,
+              val,
+              ptr::null::<timespec>(),
+              ptr::null_mut(),
+              0)
+    };
 
+    get_result(ret)
+}
 
 /// Same as `wait`, except only sleeps for the given number of seconds.
 /// If the wait times out, Err(Errors::WaitTimeout) will be returned.
