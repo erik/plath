@@ -1,9 +1,8 @@
 use libc;
 
-use std::mem;
 use std::ops::Drop;
 
-const STACK_SPACE : usize = 1024 * 1024;
+const STACK_SPACE : u64 = 1024 * 1024;
 
 pub struct Thread {
     stack: *mut libc::c_void,
@@ -19,7 +18,14 @@ impl Drop for Thread {
 
 impl Thread {
     pub fn new() -> Thread {
-        let stack_space = libc::malloc(STACK_SPACE);
+        let stack_space = unsafe {
+            let m = libc::malloc(STACK_SPACE);
+
+            if m.is_null() { panic!("couldn't alloc stack space"); }
+
+            m
+        };
+
         Thread { stack: stack_space }
     }
 }

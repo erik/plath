@@ -1,7 +1,6 @@
 use libc;
 use libc::c_int;
 
-use std::mem::transmute;
 use std::ptr;
 use std::result::Result;
 
@@ -73,7 +72,7 @@ pub fn wait(addr: &mut i32, val: i32) -> Result<i32, Errors> {
         futex(addr as (*mut i32),
               op::WAIT,
               val,
-              ptr::null::<timespec>(),
+              ptr::null::<libc::timespec>(),
               ptr::null_mut(),
               0)
     };
@@ -84,7 +83,7 @@ pub fn wait(addr: &mut i32, val: i32) -> Result<i32, Errors> {
 /// Same as `wait`, except only sleeps for the given number of seconds.
 /// If the wait times out, Err(Errors::WaitTimeout) will be returned.
 pub fn time_wait(addr: &mut i32, val: i32, wait_secs: u32) -> Result<i32, Errors> {
-    let ts = timespec { tv_sec: wait_secs as i64, tv_nsec: 0 };
+    let ts = libc::timespec { tv_sec: wait_secs as i64, tv_nsec: 0 };
 
     let ret = unsafe {
         futex(addr as (*mut i32),
@@ -108,7 +107,7 @@ pub fn wake(addr: &mut i32, nprocs: u32) -> Result<i32, Errors> {
         futex(addr as (*mut i32),
               op::WAKE,
               nprocs as i32,
-              ptr::null::<timespec>(),
+              ptr::null::<libc::timespec>(),
               ptr::null_mut(),
               0)
     };
@@ -128,7 +127,7 @@ pub fn requeue(addr: &mut i32, requeue_addr: &mut i32, val: i32, nprocs: u32) ->
         futex(addr as *mut i32,
               op::CMP_REQUEUE,
               nprocs as i32,
-              null::<timespec>(),
+              ptr::null::<libc::timespec>(),
               requeue_addr as *mut i32,
               val)
     };
