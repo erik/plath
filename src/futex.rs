@@ -1,10 +1,11 @@
 use libc;
-use libc::{c_int, c_void, timespec};
+use libc::c_int;
 
 use std::mem::transmute;
-use std::ptr::{null, null_mut};
+use std::ptr;
 use std::result::Result;
 
+/// Possible error conditions that futex(2) can return
 pub enum Errors {
     /// No read access to futex memory
     FutexRead,
@@ -22,28 +23,18 @@ pub enum Errors {
     WaitTimeout
 }
 
-/// Wraps futex(2):
+
+/// Wraps syscall_futex:
 ///
 /// int futex(int *uaddr, int op, int val, const struct timespec *timeout,
 ///           int *uaddr2, int val3);
-//#[link(name="libc")]
-//extern {
-unsafe fn futex(addr1:    *mut   c_int,
-         op:              c_int,
-         val:             c_int,
-         timespec: *const timespec,
-         addr2:    *mut   c_int,
-         val3:            c_int)
-         -> c_int {
-syscall!(FUTEX, addr1, op, val, timespec, addr2, val3) as c_int
-         }
-//}
+unsafe fn futex(addr1: *mut c_int, op: c_int, val: c_int,
+                timespec: *const libc::timespec,
+                addr2: *mut c_int, val3: c_int) -> c_int {
 
-const OP_WAIT        : i32 = 0;
-const OP_WAKE        : i32 = 1;
-// deprecated: const OP_FD          : i32 = 2;
-// deprecated: const OP_REQUEUE     : i32 = 3;
-const OP_CMP_REQUEUE : i32 = 4;
+    // XXX: syscall returns usize, we expect i32
+    syscall!(FUTEX, addr1, op, val, timespec, addr2, val3) as c_int
+}
 
 
 #[inline(always)]
@@ -65,19 +56,30 @@ fn get_result(retval: i32) -> Result<i32, Errors> {
     }
 }
 
+
+/// Futex operations
+mod op {
+    pub const WAIT: i32 = 0;
+    pub const WAKE: i32 = 1;
+    pub const CMP_REQUEUE: i32 = 4;
+    // deprecated: FD(2), REQUEUE(3)
+}
+
+
 /// Verifies that the futex in `addr` still contains the value `val`, and then
 /// sleeps the thread awaiting a FUTEX_WAKE.
 pub fn wait(addr: &mut i32, val: i32) -> Result<i32, Errors> {
     unsafe {
         get_result(
             futex(addr as (*mut i32),
-                  OP_WAIT,
+                  op::WAIT,
                   val,
-                  null::<timespec>(),
-                  null_mut::<i32>(),
+                  ptr::null::<timespec>(),
+                  ptr::null_mut(),
                   0))
     }
 }
+
 
 /// Same as `wait`, except only sleeps for the given number of seconds.
 /// If the wait times out, Err(Errors::WaitTimeout) will be returned.
@@ -86,15 +88,16 @@ pub fn time_wait(addr: &mut i32, val: i32, wait_secs: u32) -> Result<i32, Errors
 
     let ret = unsafe {
         futex(addr as (*mut i32),
-              OP_WAIT,
+              op::WAIT,
               val,
               &ts,
-              transmute(null::<i32>()),
+              ptr::null_mut(),
               0)
     };
 
     get_result(ret)
 }
+
 
 /// This operation wakes at most `nprocs` processes waiting on this
 /// futex address (i.e., inside FUTEX_WAIT).
@@ -103,15 +106,16 @@ pub fn time_wait(addr: &mut i32, val: i32, wait_secs: u32) -> Result<i32, Errors
 pub fn wake(addr: &mut i32, nprocs: u32) -> Result<i32, Errors> {
     let ret = unsafe {
         futex(addr as (*mut i32),
-              OP_WAKE,
+              op::WAKE,
               nprocs as i32,
-              null::<timespec>(),
-              null_mut::<i32>(),
+              ptr::null::<timespec>(),
+              ptr::null_mut(),
               0)
     };
 
     get_result(ret)
 }
+
 
 /// This operation was introduced in order to avoid a "thundering herd" effect
 /// when `wake` is used and all processes woken up need to acquire another
@@ -122,7 +126,7 @@ pub fn wake(addr: &mut i32, nprocs: u32) -> Result<i32, Errors> {
 pub fn requeue(addr: &mut i32, requeue_addr: &mut i32, val: i32, nprocs: u32) -> Result<i32, Errors> {
     let ret = unsafe {
         futex(addr as *mut i32,
-              OP_CMP_REQUEUE,
+              op::CMP_REQUEUE,
               nprocs as i32,
               null::<timespec>(),
               requeue_addr as *mut i32,

@@ -3,10 +3,7 @@ use libc;
 use std::mem;
 use std::ops::Drop;
 
-use ffi;
-
-
-pub const STACK_SPACE : usize = 1024 * 1024;
+const STACK_SPACE : usize = 1024 * 1024;
 
 pub struct Thread {
     stack: *mut libc::c_void,
@@ -21,8 +18,8 @@ impl Drop for Thread {
 
 
 impl Thread {
-    fn new() -> Thread {
-        let stack_space = ffi::alloc(STACK_SPACE);
+    pub fn new() -> Thread {
+        let stack_space = libc::malloc(STACK_SPACE);
         Thread { stack: stack_space }
     }
 }
