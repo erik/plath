@@ -1,3 +1,4 @@
+#![feature(asm)]
 #![feature(libc)]
 #![allow(dead_code)]
 
