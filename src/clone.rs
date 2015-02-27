@@ -44,7 +44,6 @@ extern "C" {
     ///
     /// int clone(int (*fn)(void *), void *child_stack, int flags, void *arg,
     ///           pid_t *ptid, struct user_desc *tls, pid_t *ctid)
-    #[link_name="clone"]
     pub fn clone(func: CloneFunc,
                  child_stack: *mut c_void,
                  flag: c_int,

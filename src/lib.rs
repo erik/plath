@@ -5,9 +5,10 @@
 extern crate syscall;
 extern crate libc;
 
-//mod thread;
-pub mod futex;
-pub mod clone;
+mod clone;
+mod futex;
+mod mutex;
+mod thread;
 
 #[test]
 fn it_works() {
@@ -27,8 +28,7 @@ fn it_works() {
 
         clone::clone(test,
                      std::mem::transmute(stack.offset(1024 * 1024)),
-                     clone::VM | clone::FILES | clone::FS |
-                     clone::SIGHAND | clone::DETACHED,
+                     clone::flags::COMMON,
                      ptr::null_mut())
     };
     println!("child id = {}", id);

@@ -7,7 +7,6 @@ pub struct Mutex {
     inner: UnsafeCell<MutexInner>
 }
 
-
 struct MutexInner {
     lock: AtomicUsize,
     guard: i32
@@ -34,10 +33,13 @@ impl Mutex {
 }
 
 
+const LOCK_FREE: usize = 0xa5a5a5a5;
+
+/// TODO: handle all let _ = ... error cases.
 impl MutexInner {
     pub fn new() -> MutexInner {
         MutexInner {
-            lock: AtomicUsize::new(0),
+            lock: AtomicUsize::new(LOCK_FREE),
             guard: 0
         }
     }
@@ -49,26 +51,28 @@ impl MutexInner {
             panic!("trying to unlock a mutex we don't own");
         }
 
-        // TODO: handle this
+        // mark the lock as free
+        self.lock.store(LOCK_FREE, Ordering::Relaxed);
+
+        // wake up 1 thread waiting to lock
         let _ = futex::wake(&mut self.guard, 1);
     }
 
     pub fn lock(&mut self) {
-        let old_val = self.lock.load(Ordering::Relaxed);
-
         loop {
             // TODO: get thread id.
-            let new_val = 0;
+            let tid = 0i32;
+            let swap = self.lock.compare_and_swap(LOCK_FREE, tid as usize, Ordering::Relaxed);
 
-            let swap = self.lock.compare_and_swap(old_val, new_val, Ordering::Relaxed);
+            // If compare_and_swap didn't return LOCK_FREE, we weren't the ones
+            // to set it, so go to sleep and spin.
+            if swap != LOCK_FREE {
+                self.guard = tid;
 
-            // If CAS didn't return old_val, it didn't succeed, so futex and spin
-            if swap != old_val {
-                // TODO: handle possible error
+                // Go to sleep, wait for someone to unlock
                 let _ = futex::wait(&mut self.guard, 0);
             }
-
-            // Otherwise we got the mutex
+            // Otherwise we've got the mutex, time to return.
             else { break; }
         }
     }
