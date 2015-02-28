@@ -9,6 +9,7 @@ extern crate libc;
 mod clone;
 mod futex;
 mod mutex;
+#[macro_use]
 mod thread;
 
 #[test]

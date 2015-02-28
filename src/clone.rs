@@ -1,14 +1,17 @@
 use libc::{c_int, c_void, pid_t};
 
+use thread::Thread;
+
 /// Flags that clone(2) uses. For more verbose descriptions, see the manpage.
 ///
 /// There are some other flags that can be passed, but they're useless for our
 /// purposes, so I won't add them here.
-mod flags {
+pub mod flags {
     use libc::c_int;
 
     /// This is how we'll be calling clone for threading purposes.
-    pub const COMMON: c_int = VM | FS | FILES | SIGHAND | PARENT | THREAD;
+    pub const COMMON: c_int = VM | FS | FILES | SIGHAND | THREAD | //SETTLS |
+                              PARENT_SETTID | CHILD_CLEARTID | SYSVSEM;
 
     /// Set if VM shared between processes.
     const VM: c_int = 0x00000100;
@@ -49,7 +52,6 @@ extern "C" {
                  flag: c_int,
                  arg: *mut c_void,
                  ptid: *mut pid_t,
-                 tls: *mut c_void, // TODO: handle this somehow
-                 ctid: *mut pid_t
-                 ) -> c_int;
+                 tls: *mut Thread, // TODO: handle this somehow
+                 ctid: *mut pid_t) -> c_int;
 }
