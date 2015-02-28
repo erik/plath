@@ -6,4 +6,9 @@
 >
 > ― Sylvia Plath
 
-Let's implement a threading library from the ground up
+plath is an experiment to build a minimal threading library in Rust without the
+help of much other than standard Linux syscalls. It should contain all the most
+fundamental elements of pthreads / standard threading libraries.
+
+In the interest of keeping this simple, only recent x86_64 Linux systems are
+supported.
