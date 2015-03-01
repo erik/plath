@@ -13,7 +13,7 @@ macro_rules! offset_of {
     ($kind:ty, $member:ident) => {
         unsafe {
             let ptr = 0x0usize as *const $kind;
-            let member_addr: usize = std::mem::transmute(&(*ptr).$member);
+            let member_addr = (&(*ptr).$member as *const _) as usize;
 
             member_addr
         }
