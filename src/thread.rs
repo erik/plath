@@ -10,47 +10,40 @@ const STACK_SIZE: u64 = 16384;
 /// Idea is simply to see what the address of that member would be if the
 /// struct was created at address 0x0 (which gives its offset in bytes).
 macro_rules! offset_of {
-    ( $($kind:ty, $member:ident),*) => {{
-        $(
-            unsafe {
-                let ptr: *mut $kind = std::mem::transmute(0x0usize);
-                let member_addr: usize = std::mem::transmute(&(*ptr).$member);
+    ($kind:ty, $member:ident) => {
+        unsafe {
+            let ptr: *mut $kind = std::mem::transmute(0x0usize);
+            let member_addr: usize = std::mem::transmute(&(*ptr).$member);
 
-                member_addr
-            }
-         )*
-    }};
+            member_addr
+        }
+    };
 }
 
 /// Return a pointer to the TLS value at the given offset.
 macro_rules! get_thread_mem {
-    ( $($offset:expr, $kind:ty),* ) => {{
-        $(
-            let dest_ptr: *mut $kind;
+    ($offset:expr, $kind:ty) => {{
+        let dest_ptr: *mut $kind;
 
-            // We can't use constant segment offsets here due to some odd
-            // asm! behavior, so just use indirect (it's slower, oh well).
-            asm!("mov %fs:($1), $0"
-                 : "=r"(dest_ptr)
-                 : "r" ($offset)
-                 :: "volatile");
+        // We can't use constant segment offsets here due to some odd
+        // asm! behavior, so just use indirect (it's slower, oh well).
+        asm!("mov %fs:($1), $0"
+             : "=r"(dest_ptr)
+             : "r" ($offset)
+             :: "volatile");
 
-            dest_ptr
-          )*
-        }
-    };
+        dest_ptr
+    }};
 }
 
 macro_rules! set_thread_mem {
-    ( $($offset:expr, $expression:expr),* ) => {{
-        $(
-            asm!("movl $1, %fs:($0)" :
-                 : "r"($offset), "i"($expression)
-                 :: "volatile");
-          )*
-        }
+    ($offset:expr, $expression:expr) => {
+        asm!("movl $1, %fs:($0)" :
+             : "r"($offset), "i"($expression)
+             :: "volatile");
     };
 }
+
 
 #[repr(C, packed)]
 #[derive(Debug)]
