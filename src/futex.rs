@@ -69,7 +69,7 @@ mod op {
 /// sleeps the thread awaiting a FUTEX_WAKE.
 pub fn wait(addr: &mut i32, val: i32) -> Result<i32, Errors> {
     let ret = unsafe {
-        futex(addr as (*mut i32),
+        futex(addr,
               op::WAIT,
               val,
               ptr::null::<libc::timespec>(),
@@ -86,7 +86,7 @@ pub fn time_wait(addr: &mut i32, val: i32, wait_secs: u32) -> Result<i32, Errors
     let ts = libc::timespec { tv_sec: wait_secs as i64, tv_nsec: 0 };
 
     let ret = unsafe {
-        futex(addr as (*mut i32),
+        futex(addr,
               op::WAIT,
               val,
               &ts,
@@ -102,11 +102,11 @@ pub fn time_wait(addr: &mut i32, val: i32, wait_secs: u32) -> Result<i32, Errors
 /// futex address (i.e., inside FUTEX_WAIT).
 ///
 /// Results the number of processes woken up or error
-pub fn wake(addr: &mut i32, nprocs: u32) -> Result<i32, Errors> {
+pub fn wake(addr: &mut i32, nprocs: i32) -> Result<i32, Errors> {
     let ret = unsafe {
-        futex(addr as (*mut i32),
+        futex(addr,
               op::WAKE,
-              nprocs as i32,
+              nprocs,
               ptr::null::<libc::timespec>(),
               ptr::null_mut(),
               0)
@@ -122,13 +122,13 @@ pub fn wake(addr: &mut i32, nprocs: u32) -> Result<i32, Errors> {
 /// waiters on the futex at address `requeue_addr`.
 ///
 /// TODO: explain val.
-pub fn requeue(addr: &mut i32, requeue_addr: &mut i32, val: i32, nprocs: u32) -> Result<i32, Errors> {
+pub fn requeue(addr: &mut i32, requeue_addr: &mut i32, val: i32, nprocs: i32) -> Result<i32, Errors> {
     let ret = unsafe {
-        futex(addr as *mut i32,
+        futex(addr,
               op::CMP_REQUEUE,
-              nprocs as i32,
+              nprocs,
               ptr::null::<libc::timespec>(),
-              requeue_addr as *mut i32,
+              requeue_addr,
               val)
     };
 
