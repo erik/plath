@@ -34,7 +34,7 @@ fn it_works() {
             set_thread_mem!(x, 123456);
 
             let mut thd = get_thread_mem!(0, Thread);
-            println!("i should have set tid {:?} {:?}", thd, *thd );
+            println!("i should have set tid = {:?}", (*thd).tid );
 
         }
 

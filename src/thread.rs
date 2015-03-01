@@ -12,7 +12,7 @@ const STACK_SIZE: u64 = 16384;
 macro_rules! offset_of {
     ($kind:ty, $member:ident) => {
         unsafe {
-            let ptr: *mut $kind = std::mem::transmute(0x0usize);
+            let ptr = 0x0usize as *const $kind;
             let member_addr: usize = std::mem::transmute(&(*ptr).$member);
 
             member_addr
