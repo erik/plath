@@ -1,21 +1,34 @@
 use libc;
 
-use std::ops::Drop;
+use std::ptr::null_mut;
 
 const STACK_SPACE : u64 = 1024 * 1024;
 
+/// Return a pointer to the TLS value at the given offset.
 macro_rules! get_thread_mem {
-    ( $($kind:ty, $offset:expr),* ) => {{
+    ( $($offset:expr, $kind:ty),* ) => {{
         $(
-            let raw_ptr: *mut $kind;
+            let dest_ptr: *mut $kind;
 
-            asm!("mov $0, fs:$1"
-                 : /* out */ "=r"(raw_ptr)
-                 : /* in */  "i" ($offset)
-                 : /* clobber */
-                 : "intel");
+            // We can't use constant segment offsets here due to some odd
+            // asm! behavior, so just use indirect (it's slower, oh well).
+            asm!("mov %fs:($1), $0"
+                 : "=r"(dest_ptr)
+                 : "r" ($offset)
+                 :: "volatile");
 
-            raw_ptr
+            dest_ptr
+          )*
+        }
+    };
+}
+
+macro_rules! set_thread_mem {
+    ( $($offset:expr, $expression:expr),* ) => {{
+        $(
+            asm!("movl $1, %fs:($0)" :
+                 : "r"($offset), "i"($expression)
+                 :: "volatile");
           )*
         }
     };
@@ -52,7 +65,7 @@ unsafe fn get_thread_tcb() {
 }
 
 pub unsafe fn get_current_thread() -> () {
-    let thd_ptr: *mut Thread = get_thread_mem!(Thread, 0);
+    let thd_ptr: *mut Thread = get_thread_mem!(0, Thread);
     if thd_ptr.is_null() { panic!("TLS thread return NULL"); }
 
     let thd = &*thd_ptr;

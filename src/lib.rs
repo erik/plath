@@ -25,7 +25,7 @@ fn it_works() {
         println!("Hello! I am a thread");
 
         unsafe {
-            let mut thd = get_thread_mem!(Thread, 0);
+            let mut thd = get_thread_mem!(0, Thread);
             println!("hello, TLS from child {:?} {:?}", thd, *thd );
         }
 
