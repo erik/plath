@@ -2,7 +2,8 @@ use libc;
 
 use std::ptr::null_mut;
 
-const STACK_SPACE : u64 = 1024 * 1024;
+/// 16k is enough for anybody.
+const STACK_SIZE: u64 = 16384;
 
 /// Return a pointer to the TLS value at the given offset.
 macro_rules! get_thread_mem {
@@ -73,28 +74,15 @@ pub unsafe fn get_current_thread() -> () {
     println!("magic = {}", thd.magic);
 }
 
-pub struct ThreadBlarg {
-    stack: *mut libc::c_void,
-}
+pub unsafe fn allocate_stack() -> *mut libc::c_void {
+    let prot = libc::PROT_EXEC | libc::PROT_READ | libc::PROT_WRITE;
+    let flags = libc::MAP_PRIVATE | libc::MAP_ANONYMOUS | libc::MAP_STACK;
 
+    let stack = libc::mmap(null_mut(), STACK_SIZE, prot, flags, -1, 0);
 
-impl Drop for ThreadBlarg {
-    fn drop(&mut self) {
-        unsafe { libc::free(self.stack); }
+    if stack == libc::MAP_FAILED || stack.is_null() {
+        panic!("couldn't mmap space for stack");
     }
-}
 
-
-impl ThreadBlarg {
-    pub fn new() -> ThreadBlarg {
-        let stack_space = unsafe {
-            let m = libc::malloc(STACK_SPACE);
-
-            if m.is_null() { panic!("couldn't alloc stack space"); }
-
-            m
-        };
-
-        ThreadBlarg { stack: stack_space }
-    }
+    stack
 }
