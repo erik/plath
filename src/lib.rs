@@ -24,9 +24,18 @@ fn it_works() {
     extern fn test(_: *mut libc::c_void) -> libc::c_int {
         println!("Hello! I am a thread");
 
+        let x = offset_of!(Thread, tid);
+        println!("tid offset = {}", x);
+
         unsafe {
             let mut thd = get_thread_mem!(0, Thread);
             println!("hello, TLS from child {:?} {:?}", thd, *thd );
+
+            set_thread_mem!(x, 123456);
+
+            let mut thd = get_thread_mem!(0, Thread);
+            println!("i should have set tid {:?} {:?}", thd, *thd );
+
         }
 
         0

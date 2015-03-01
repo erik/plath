@@ -5,6 +5,23 @@ use std::ptr::null_mut;
 /// 16k is enough for anybody.
 const STACK_SIZE: u64 = 16384;
 
+/// Get the offset in bytes of some particular struct member.
+///
+/// Idea is simply to see what the address of that member would be if the
+/// struct was created at address 0x0 (which gives its offset in bytes).
+macro_rules! offset_of {
+    ( $($kind:ty, $member:ident),*) => {{
+        $(
+            unsafe {
+                let ptr: *mut $kind = std::mem::transmute(0x0usize);
+                let member_addr: usize = std::mem::transmute(&(*ptr).$member);
+
+                member_addr
+            }
+         )*
+    }};
+}
+
 /// Return a pointer to the TLS value at the given offset.
 macro_rules! get_thread_mem {
     ( $($offset:expr, $kind:ty),* ) => {{
@@ -34,7 +51,6 @@ macro_rules! set_thread_mem {
         }
     };
 }
-
 
 #[repr(C, packed)]
 #[derive(Debug)]
