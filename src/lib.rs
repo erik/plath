@@ -1,6 +1,5 @@
-#![feature(asm)]
-#![feature(libc)]
-#![allow(dead_code)]
+#![feature(asm, libc)]
+#![allow(dead_code, raw_pointer_derive)]
 
 #[macro_use]
 extern crate syscall;
@@ -11,14 +10,13 @@ mod futex;
 mod mutex;
 #[macro_use]
 mod thread;
+mod stack;
 
 #[test]
 fn it_works() {
     use libc;
     use std::ptr;
     use std::mem;
-    use std::old_io::timer;
-    use std::time::duration::Duration;
     use thread::Thread;
 
     extern fn test(_: *mut libc::c_void) -> libc::c_int {
@@ -34,8 +32,7 @@ fn it_works() {
             thread::set_tls_mem(x, 123456);
 
             let thd = thread::get_current_thread();
-            println!("i should have set tid = {:?}", thd.tid );
-
+            println!("i should have set tid = {:x}", thd.tid );
         }
 
         0
@@ -44,9 +41,9 @@ fn it_works() {
     let thd: &mut Thread = unsafe { std::mem::transmute(libc::calloc(1, mem::size_of::<Thread>() as u64)) };
 
     let id = unsafe {
-        let stack = libc::malloc(1024 * 1024);
+        let stack = stack::allocate_stack();
         clone::clone(test,
-                     std::mem::transmute(stack.offset(1024 * 1024)),
+                     std::mem::transmute(stack.offset(16384)),
                      clone::flags::COMMON,
                      ptr::null_mut(), // mem::transmute(&mut thd)
                      &mut thd.pid,
@@ -54,9 +51,6 @@ fn it_works() {
                      &mut thd.tid)
     };
     println!("child id = {}, {}, {}", id, thd.tid, thd.pid);
-    println!("thd from parent{:?} ", thd );
 
-    timer::sleep(Duration::seconds(15));
-
-    println!("And I'm the parent!");
+    loop {}
 }

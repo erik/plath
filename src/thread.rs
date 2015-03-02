@@ -1,10 +1,5 @@
 use libc;
 
-use std::ptr::null_mut;
-
-/// 16k is enough for anybody.
-pub const STACK_SIZE: u64 = 16384;
-
 /// Get the offset in bytes of some particular struct member.
 ///
 /// Idea is simply to see what the address of that member would be if the
@@ -27,7 +22,7 @@ pub unsafe fn get_tls_mem<T>(offset: usize) -> *mut T {
 
     // We can't use constant segment offsets here due to some odd
     // asm! behavior, so just use indirect (it's slower, oh well).
-    asm!("mov %fs:($1), $0"
+    asm!("movq %fs:($1), $0"
          : "=r"(dest_ptr)
          : "r" (offset)
          :: "volatile");
@@ -79,19 +74,4 @@ pub fn get_current_thread() -> &'static Thread {
     let thd = unsafe { &*thd_ptr };
 
     thd
-}
-
-pub fn allocate_stack() -> *mut libc::c_void {
-    let prot = libc::PROT_EXEC | libc::PROT_READ | libc::PROT_WRITE;
-    let flags = libc::MAP_PRIVATE | libc::MAP_ANONYMOUS | libc::MAP_STACK;
-
-    let stack = unsafe {
-        libc::mmap(null_mut(), STACK_SIZE, prot, flags, -1, 0)
-    };
-
-    if stack == libc::MAP_FAILED || stack.is_null() {
-        panic!("couldn't mmap space for stack");
-    }
-
-    stack
 }
