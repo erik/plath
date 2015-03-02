@@ -20,20 +20,22 @@ fn it_works() {
     use thread::Thread;
     use stack::Stack;
 
-    extern fn test(a: *mut libc::c_void) -> libc::c_int {
+    extern fn test(arg: *mut libc::c_void) -> libc::c_int {
         println!("Hello! I am a thread");
 
-        let thd: *const Thread = unsafe { std::mem::transmute(a) };
-        unsafe {println!("here's my arg {:?} ", *thd);}
+        unsafe {
+            let thd: *const Thread = std::mem::transmute(arg);
+            println!("Arg to child: 0x{:x} ", (*thd).magic);
+        }
 
-        let x = offset_of!(Thread, tid);
-        println!("tid offset = {}", x);
+        let offset = offset_of!(Thread, tid);
+        println!("tid offset = {}", offset);
 
         unsafe {
             let thd = thread::get_current_thread();
-            println!("hello, TLS from child {:?} ", thd);
+            println!("Child TLS: {:?} ", thd);
 
-            thread::set_tls_mem(x, 123456);
+            thread::set_tls_mem(offset, 123456);
 
             let thd = thread::get_current_thread();
             println!("i should have set tid = {:?}", thd.tid );
@@ -42,8 +44,9 @@ fn it_works() {
         0
     }
 
-    let mut stack = Stack::new();
+    let stack = Stack::new();
     let mut thd = stack.install_thread_block();
+    thd.magic = 0x55005500;
 
     let id = unsafe {
         clone::clone(test,
