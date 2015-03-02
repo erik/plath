@@ -21,6 +21,7 @@ macro_rules! offset_of {
 }
 
 /// Return a pointer to the TLS value at the given offset.
+#[inline(always)]
 pub unsafe fn get_tls_mem<T>(offset: usize) -> *mut T {
     let dest_ptr: *mut T;
 
@@ -34,6 +35,7 @@ pub unsafe fn get_tls_mem<T>(offset: usize) -> *mut T {
     dest_ptr
 }
 
+#[inline(always)]
 pub unsafe fn set_tls_mem<T>(offset: usize, expr: T) {
     asm!("movl $1, %fs:($0)" :
          : "r"(offset), "r"(expr)
