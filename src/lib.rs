@@ -25,7 +25,9 @@ fn it_works() {
 
         unsafe {
             let thd: *const Thread = std::mem::transmute(arg);
-            println!("Arg to child: 0x{:x} ", (*thd).magic);
+            println!("Arg to child: 0x{:x}, pid:{}", (*thd).magic, (*thd).pid);
+
+            println!("Set {:?}", *thd);
         }
 
         let offset = offset_of!(Thread, tid);
@@ -46,7 +48,6 @@ fn it_works() {
 
     let stack = Stack::new();
     let mut thd = stack.install_thread_block();
-    thd.magic = 0x55005500;
 
     let id = unsafe {
         clone::clone(test,

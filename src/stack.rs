@@ -28,7 +28,7 @@ impl Stack {
             *(base_ptr as *mut usize) = CANARY;
 
             Stack {
-                stack_top: base_ptr.offset(SIZE - 256),
+                stack_top: base_ptr.offset(SIZE - 1024),
                 top: base_ptr.offset(SIZE),
                 size: SIZE
             }
@@ -62,10 +62,16 @@ impl Stack {
             &mut *thd_ptr
         };
 
+        let current_thd = thread::get_current_thread();
 
+        thd.header.thread_self = thd as *mut _;
+        thd.header.tcb = thd as *mut _ as *mut _;
+        thd.header.multiple_threads = 1;
+        thd.header.dtv = current_thd.header.dtv;
 
-        thd.magic = 100;
+        thd.magic = 0x55005500;
         thd.stack = self as *const Stack;
+        thd.pid = current_thd.pid;
 
         thd
     }
