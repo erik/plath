@@ -19,16 +19,23 @@ fn it_works() {
     use std::mem;
     use thread::Thread;
     use stack::Stack;
+    use mutex::Mutex;
+
 
     extern fn test(arg: *mut libc::c_void) -> libc::c_int {
-        println!("Hello! I am a thread");
-
         unsafe {
-            let thd: *const Thread = std::mem::transmute(arg);
-            println!("Arg to child: 0x{:x}, pid:{}", (*thd).magic, (*thd).pid);
+            //let thd: *const Thread = std::mem::transmute(arg);
+            //println!("Arg to child: 0x{:x}, pid:{}", (*thd).magic, (*thd).pid);
+            //println!("Set {:?}", *thd);
 
-            println!("Set {:?}", *thd);
+            let mutex: *mut Mutex = std::mem::transmute(arg);
+            (*mutex).lock();
+
+            println!("child holds the mutex");
+            (*mutex).unlock();
         }
+
+        println!("Hello! I am a thread");
 
         let offset = offset_of!(Thread, tid);
         println!("tid offset = {}", offset);
@@ -48,12 +55,16 @@ fn it_works() {
 
     let stack = Stack::new();
     let mut thd = stack.install_thread_block();
+    let mut mutex = Mutex::new();
+
+    mutex.lock();
+    println!("parent holds the mutex");
 
     let id = unsafe {
         clone::clone(test,
                      stack.stack_top,
                      clone::flags::COMMON,
-                     thd as *mut _ as *mut _,
+                     &mut mutex as *mut _ as *mut _,
                      &mut thd.pid,
                      std::ptr::null_mut(),
                      &mut thd.tid)
@@ -61,6 +72,9 @@ fn it_works() {
 
     println!("child id = {}, {}, {}", id, thd.tid, thd.pid);
     println!("stack is valid? {}", stack.is_valid());
+
+    println!("parent releasing mutex...");
+    mutex.unlock();
 
     loop {}
 }
