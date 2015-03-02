@@ -12,7 +12,9 @@ pub const CANARY: usize = 0xABCDABCD;
 pub struct Stack {
     /// Top of the stack, what clone expects
     pub stack_top: *mut libc::c_void,
-    pub stack_bot: *mut libc::c_void,
+    /// Top of mapped memory
+    pub top: *mut libc::c_void,
+    /// Size of the stack
     pub size: isize
 }
 
@@ -26,8 +28,8 @@ impl Stack {
             *(base_ptr as *mut usize) = CANARY;
 
             Stack {
-                stack_bot: base_ptr,
                 stack_top: base_ptr.offset(SIZE - 256),
+                top: base_ptr.offset(SIZE),
                 size: SIZE
             }
         }
@@ -49,12 +51,12 @@ impl Stack {
     }
 
     pub fn is_valid(&self) -> bool {
-        unsafe { *(self.stack_bot as *mut usize) == CANARY }
+        unsafe { *(self.top.offset(-self.size) as *mut usize) == CANARY }
     }
 
     pub fn install_thread_block<'a>(&'a self) -> &'a mut thread::Thread {
         let thd = unsafe {
-            let top = self.stack_bot.offset(self.size) as *mut thread::Thread;
+            let top = self.top as *mut thread::Thread;
             let thd_ptr = top.offset(-1);
 
             &mut *thd_ptr

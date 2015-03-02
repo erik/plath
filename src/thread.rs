@@ -40,37 +40,56 @@ pub unsafe fn set_tls_mem<T>(offset: usize, expr: T) {
 }
 
 
+/// TCB (thread control block). We unfortunately need to match glibc here, so
+/// there's a ton of unused vars.
 #[repr(C, packed)]
 #[derive(Debug)]
-pub struct ControlBlockHead {
-    tcb: *mut libc::c_void,
-    dtv: *mut libc::c_void,
-    thread_self: *mut Thread,
+pub struct TcbHead {
+    pub tcb: *mut libc::c_void,
+    pub dtv: *mut libc::c_void,
+    pub thread_self: *mut Thread,
+    pub multiple_threads: i32,
+    pub gscope_flag: i32,
+    pub sysinfo: *mut u32,
+    pub stack_guard: *mut u32,
+    pub pointer_guard: *mut u32,
+    pub vgetcpu_cache: [*mut u64; 2],
 
-    /// We don't actually care about the rest.
-    padding: [*mut libc::c_void; 21],
+    __unused_1: [u32; 2],
+    __unused_2: [*const libc::c_void; 5],
+    __unused_3: u64,
+    __unused_4: [*const libc::c_void; 32],
+    __unused_5: [*const libc::c_void; 32],
+    __padding: [*const libc::c_void; 8],
 }
 
 
 #[repr(C, packed)]
 #[derive(Debug)]
 pub struct Thread {
-    header: ControlBlockHead,
+    pub header: TcbHead,
+
+    // required by glibc
+    _list: [*const libc::c_void; 2],
 
     /// This thread's id
     pub tid: libc::pid_t,
-
     /// This thread's parent pid
     pub pid: libc::pid_t,
 
-    pub stack: *const Stack,
+    /// more glibc requirements
+    /// TODO: find exact size
+    _padding: [*const libc::c_void; 10],
 
-    pub magic: usize
+    pub stack: *const Stack,
+    pub magic: usize,
 }
 
 
 pub fn get_current_thread() -> &'static Thread {
-    let thd_ptr: *mut Thread = unsafe { get_tls_mem(0) };
+    let thread_offset = offset_of!(TcbHead, thread_self);
+
+    let thd_ptr: *mut Thread = unsafe { get_tls_mem(thread_offset) };
     if thd_ptr.is_null() {
         panic!("TLS thread return NULL");
     }
