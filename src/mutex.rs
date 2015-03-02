@@ -2,6 +2,7 @@ use std::cell::UnsafeCell;
 use std::sync::atomic::{AtomicUsize, Ordering};
 
 use futex;
+use thread;
 
 pub struct Mutex {
     inner: UnsafeCell<MutexInner>
@@ -19,14 +20,14 @@ impl Mutex {
 
     pub fn lock(&mut self) {
         unsafe {
-            let ref mut inner = *self.inner.get();
+            let inner = &mut *self.inner.get();
             inner.lock()
         }
     }
 
     pub fn unlock(&mut self) {
         unsafe {
-            let ref mut inner = *self.inner.get();
+            let inner = &mut *self.inner.get();
             inner.unlock()
         }
     }
@@ -47,7 +48,7 @@ impl MutexInner {
     pub fn unlock(&mut self) {
         let old_val = self.lock.load(Ordering::Relaxed);
 
-        if old_val != /* TODO: get thread id */ 0 {
+        if old_val != thread::get_current_thread().tid as usize {
             panic!("trying to unlock a mutex we don't own");
         }
 
@@ -60,15 +61,12 @@ impl MutexInner {
 
     pub fn lock(&mut self) {
         loop {
-            // TODO: get thread id.
-            let tid = 0i32;
+            let tid = thread::get_current_thread().tid;
             let swap = self.lock.compare_and_swap(LOCK_FREE, tid as usize, Ordering::Relaxed);
 
             // If compare_and_swap didn't return LOCK_FREE, we weren't the ones
             // to set it, so go to sleep and spin.
             if swap != LOCK_FREE {
-                self.guard = tid;
-
                 // Go to sleep, wait for someone to unlock
                 let _ = futex::wait(&mut self.guard, 0);
             }
