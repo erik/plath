@@ -1,7 +1,5 @@
 use libc::{c_int, c_void, pid_t};
 
-use thread::Thread;
-
 /// Flags that clone(2) uses. For more verbose descriptions, see the manpage.
 ///
 /// There are some other flags that can be passed, but they're useless for our
@@ -52,6 +50,6 @@ extern "C" {
                  flag: c_int,
                  arg: *mut c_void,
                  ptid: *mut pid_t,
-                 tls: *mut Thread, // TODO: handle this somehow
+                 tls: *mut c_void, // TODO: handle this somehow
                  ctid: *mut pid_t) -> c_int;
 }

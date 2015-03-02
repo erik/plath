@@ -28,13 +28,13 @@ fn it_works() {
         println!("tid offset = {}", x);
 
         unsafe {
-            let mut thd = get_thread_mem!(0, Thread);
-            println!("hello, TLS from child {:?} {:?}", thd, *thd );
+            let thd = thread::get_current_thread();
+            println!("hello, TLS from child {:?} ", thd);
 
-            set_thread_mem!(x, 123456);
+            thread::set_tls_mem(x, 123456);
 
-            let mut thd = get_thread_mem!(0, Thread);
-            println!("i should have set tid = {:?}", (*thd).tid );
+            let thd = thread::get_current_thread();
+            println!("i should have set tid = {:?}", thd.tid );
 
         }
 

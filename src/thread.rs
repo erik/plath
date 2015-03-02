@@ -21,27 +21,23 @@ macro_rules! offset_of {
 }
 
 /// Return a pointer to the TLS value at the given offset.
-macro_rules! get_thread_mem {
-    ($offset:expr, $kind:ty) => {{
-        let dest_ptr: *mut $kind;
+pub unsafe fn get_tls_mem<T>(offset: usize) -> *mut T {
+    let dest_ptr: *mut T;
 
-        // We can't use constant segment offsets here due to some odd
-        // asm! behavior, so just use indirect (it's slower, oh well).
-        asm!("mov %fs:($1), $0"
-             : "=r"(dest_ptr)
-             : "r" ($offset)
-             :: "volatile");
+    // We can't use constant segment offsets here due to some odd
+    // asm! behavior, so just use indirect (it's slower, oh well).
+    asm!("mov %fs:($1), $0"
+         : "=r"(dest_ptr)
+         : "r" (offset)
+         :: "volatile");
 
-        dest_ptr
-    }};
+    dest_ptr
 }
 
-macro_rules! set_thread_mem {
-    ($offset:expr, $expression:expr) => {
-        asm!("movl $1, %fs:($0)" :
-             : "r"($offset), "i"($expression)
-             :: "volatile");
-    };
+pub unsafe fn set_tls_mem<T>(offset: usize, expr: T) {
+    asm!("movl $1, %fs:($0)" :
+         : "r"(offset), "r"(expr)
+         :: "volatile");
 }
 
 
@@ -71,16 +67,16 @@ pub struct Thread {
     pub magic: usize
 }
 
-unsafe fn get_thread_tcb() {
-}
 
-pub unsafe fn get_current_thread() -> () {
-    let thd_ptr: *mut Thread = get_thread_mem!(0, Thread);
-    if thd_ptr.is_null() { panic!("TLS thread return NULL"); }
+pub fn get_current_thread() -> &'static Thread {
+    let thd_ptr: *mut Thread = unsafe { get_tls_mem(0) };
+    if thd_ptr.is_null() {
+        panic!("TLS thread return NULL");
+    }
 
-    let thd = &*thd_ptr;
+    let thd = unsafe { &*thd_ptr };
 
-    println!("magic = {}", thd.magic);
+    thd
 }
 
 pub fn allocate_stack() -> *mut libc::c_void {
