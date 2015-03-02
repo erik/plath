@@ -18,9 +18,13 @@ fn it_works() {
     use std::ptr;
     use std::mem;
     use thread::Thread;
+    use stack::Stack;
 
-    extern fn test(_: *mut libc::c_void) -> libc::c_int {
+    extern fn test(a: *mut libc::c_void) -> libc::c_int {
         println!("Hello! I am a thread");
+
+        let thd: *const Thread = unsafe { std::mem::transmute(a) };
+        unsafe {println!("here's my arg {:?} ", *thd);}
 
         let x = offset_of!(Thread, tid);
         println!("tid offset = {}", x);
@@ -32,25 +36,27 @@ fn it_works() {
             thread::set_tls_mem(x, 123456);
 
             let thd = thread::get_current_thread();
-            println!("i should have set tid = {:x}", thd.tid );
+            println!("i should have set tid = {:?}", thd.tid );
         }
 
         0
     }
 
-    let thd: &mut Thread = unsafe { std::mem::transmute(libc::calloc(1, mem::size_of::<Thread>() as u64)) };
+    let mut stack = Stack::new();
+    let mut thd = stack.install_thread_block();
 
     let id = unsafe {
-        let stack = stack::allocate_stack();
         clone::clone(test,
-                     std::mem::transmute(stack.offset(16384)),
+                     stack.stack_top,
                      clone::flags::COMMON,
-                     ptr::null_mut(), // mem::transmute(&mut thd)
+                     thd as *mut _ as *mut _,
                      &mut thd.pid,
-                     ptr::null_mut(), // &mut thd,
+                     std::ptr::null_mut(),
                      &mut thd.tid)
     };
+
     println!("child id = {}, {}, {}", id, thd.tid, thd.pid);
+    println!("stack is valid? {}", stack.is_valid());
 
     loop {}
 }

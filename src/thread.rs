@@ -1,5 +1,7 @@
 use libc;
 
+use stack::Stack;
+
 /// Get the offset in bytes of some particular struct member.
 ///
 /// Idea is simply to see what the address of that member would be if the
@@ -22,7 +24,7 @@ pub unsafe fn get_tls_mem<T>(offset: usize) -> *mut T {
 
     // We can't use constant segment offsets here due to some odd
     // asm! behavior, so just use indirect (it's slower, oh well).
-    asm!("movq %fs:($1), $0"
+    asm!("mov %fs:($1), $0"
          : "=r"(dest_ptr)
          : "r" (offset)
          :: "volatile");
@@ -60,6 +62,8 @@ pub struct Thread {
 
     /// This thread's parent pid
     pub pid: libc::pid_t,
+
+    pub stack: *const Stack,
 
     pub magic: usize
 }
