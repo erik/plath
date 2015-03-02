@@ -17,19 +17,18 @@ macro_rules! offset_of {
     };
 }
 
-/// Return a pointer to the TLS value at the given offset.
 #[inline(always)]
-pub unsafe fn get_tls_mem<T>(offset: usize) -> *mut T {
-    let dest_ptr: *mut T;
+pub unsafe fn get_tls_mem<T>(offset: usize) -> T {
+    let dest: T;
 
     // We can't use constant segment offsets here due to some odd
     // asm! behavior, so just use indirect (it's slower, oh well).
     asm!("mov %fs:($1), $0"
-         : "=r"(dest_ptr)
+         : "=r"(dest)
          : "r" (offset)
          :: "volatile");
 
-    dest_ptr
+    dest
 }
 
 #[inline(always)]

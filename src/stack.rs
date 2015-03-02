@@ -62,6 +62,8 @@ impl Stack {
             &mut *thd_ptr
         };
 
+
+
         thd.magic = 100;
         thd.stack = self as *const Stack;
 
