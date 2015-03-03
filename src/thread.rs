@@ -1,4 +1,5 @@
 use libc;
+use std::simd;
 
 use stack::Stack;
 
@@ -57,8 +58,7 @@ pub struct TcbHead {
     __unused_1: [u32; 2],
     __unused_2: [*const libc::c_void; 5],
     __unused_3: u64,
-    __unused_4: [*const libc::c_void; 32],
-    __unused_5: [*const libc::c_void; 32],
+    __unused_4: [simd::f32x4; 32],
     __padding: [*const libc::c_void; 8],
 }
 

@@ -1,4 +1,4 @@
-#![feature(asm, libc)]
+#![feature(asm, core, libc)]
 #![allow(dead_code, raw_pointer_derive)]
 
 #[macro_use]
