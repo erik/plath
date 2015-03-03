@@ -2,6 +2,7 @@ use libc;
 use std::simd;
 
 use stack::Stack;
+use mutex::Mutex;
 
 /// Get the offset in bytes of some particular struct member.
 ///
@@ -82,6 +83,7 @@ pub struct Thread {
 
     pub stack: *const Stack,
     pub magic: usize,
+    pub mutex: Mutex,
 }
 
 

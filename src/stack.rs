@@ -2,6 +2,7 @@ use libc;
 use std::ptr::null_mut;
 
 use thread;
+use mutex;
 
 /// 16k is enough for anybody.
 pub const SIZE: isize = 16384;
@@ -72,6 +73,7 @@ impl Stack {
         thd.magic = 0x55005500;
         thd.stack = self as *const Stack;
         thd.pid = current_thd.pid;
+        thd.mutex = mutex::Mutex::new();
 
         thd
     }

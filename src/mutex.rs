@@ -1,8 +1,10 @@
 use std::cell::UnsafeCell;
+use std::fmt::{Debug, Error, Formatter};
 use std::sync::atomic::{AtomicUsize, Ordering};
 
 use ffi::futex;
 use thread;
+
 
 pub struct Mutex {
     inner: UnsafeCell<MutexInner>
@@ -10,7 +12,7 @@ pub struct Mutex {
 
 struct MutexInner {
     lock: AtomicUsize,
-    guard: i32
+    futex: i32
 }
 
 impl Mutex {
@@ -34,6 +36,22 @@ impl Mutex {
 }
 
 
+impl Debug for Mutex {
+    fn fmt(&self, fmt: &mut Formatter) -> Result<(), Error> {
+        let tid = unsafe {
+            let inner = &mut *self.inner.get();
+            inner.lock.load(Ordering::Relaxed)
+        };
+
+        if tid == LOCK_FREE {
+            fmt.write_str("Mutex { unlocked }")
+        } else {
+            fmt.write_fmt(format_args!("Mutex {{ owned by {} }}", tid))
+        }
+    }
+}
+
+
 const LOCK_FREE: usize = 0xa5a5a5a5;
 
 /// TODO: handle all let _ = ... error cases.
@@ -41,7 +59,7 @@ impl MutexInner {
     pub fn new() -> MutexInner {
         MutexInner {
             lock: AtomicUsize::new(LOCK_FREE),
-            guard: 0
+            futex: 0
         }
     }
 
@@ -56,7 +74,7 @@ impl MutexInner {
         self.lock.store(LOCK_FREE, Ordering::Relaxed);
 
         // wake up 1 thread waiting to lock
-        let _ = futex::wake(&mut self.guard, 1);
+        let _ = futex::wake(&mut self.futex, 1);
     }
 
     pub fn lock(&mut self) {
@@ -68,10 +86,13 @@ impl MutexInner {
             // to set it, so go to sleep and spin.
             if swap != LOCK_FREE {
                 // Go to sleep, wait for someone to unlock
-                let _ = futex::wait(&mut self.guard, 0);
+                let _ = futex::wait(&mut self.futex, 0);
             }
+
             // Otherwise we've got the mutex, time to return.
-            else { break; }
+            else {
+                break;
+            }
         }
     }
 }
