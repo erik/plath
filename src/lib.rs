@@ -5,8 +5,13 @@
 extern crate syscall;
 extern crate libc;
 
-mod clone;
-mod futex;
+mod ffi {
+    pub mod clone;
+    pub mod futex;
+
+    pub use ffi::clone::clone;
+}
+
 mod mutex;
 #[macro_use]
 mod thread;
@@ -15,8 +20,7 @@ mod stack;
 #[test]
 fn it_works() {
     use libc;
-    use std::ptr;
-    use std::mem;
+
     use thread::Thread;
     use stack::Stack;
     use mutex::Mutex;
@@ -61,13 +65,13 @@ fn it_works() {
     println!("parent holds the mutex");
 
     let id = unsafe {
-        clone::clone(test,
-                     stack.stack_top,
-                     clone::flags::COMMON,
-                     &mut mutex as *mut _ as *mut _,
-                     &mut thd.pid,
-                     std::ptr::null_mut(),
-                     &mut thd.tid)
+        ffi::clone(test,
+                   stack.stack_top,
+                   ffi::clone::flags::COMMON,
+                   &mut mutex as *mut _ as *mut _,
+                   &mut thd.pid,
+                   std::ptr::null_mut(),
+                   &mut thd.tid)
     };
 
     println!("child id = {}, {}, {}", id, thd.tid, thd.pid);

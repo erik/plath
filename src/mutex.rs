@@ -1,7 +1,7 @@
 use std::cell::UnsafeCell;
 use std::sync::atomic::{AtomicUsize, Ordering};
 
-use futex;
+use ffi::futex;
 use thread;
 
 pub struct Mutex {
