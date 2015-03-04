@@ -15,23 +15,26 @@ struct MutexInner {
     futex: i32
 }
 
+// TODO: a scoped / RAII lock would be useful.
 impl Mutex {
     pub fn new() -> Mutex {
         Mutex { inner: UnsafeCell::new(MutexInner::new()) }
     }
 
+    fn get_inner(&self) -> &mut MutexInner {
+        unsafe { &mut *self.inner.get() }
+    }
+
+    pub fn try_lock(&mut self) -> bool {
+        self.get_inner().try_lock()
+    }
+
     pub fn lock(&mut self) {
-        unsafe {
-            let inner = &mut *self.inner.get();
-            inner.lock()
-        }
+        self.get_inner().lock()
     }
 
     pub fn unlock(&mut self) {
-        unsafe {
-            let inner = &mut *self.inner.get();
-            inner.unlock()
-        }
+        self.get_inner().unlock()
     }
 }
 
@@ -77,22 +80,19 @@ impl MutexInner {
         let _ = futex::wake(&mut self.futex, 1);
     }
 
+    pub fn try_lock(&mut self) -> bool {
+        let tid = thread::get_current_thread().tid;
+        let swap = self.lock.compare_and_swap(LOCK_FREE, tid as usize, Ordering::Relaxed);
+
+        // If compare_and_swap returned LOCK_FREE, we were the first ones
+        // to grab the lock, so we currently own the mutex.
+        swap == LOCK_FREE
+    }
+
     pub fn lock(&mut self) {
-        loop {
-            let tid = thread::get_current_thread().tid;
-            let swap = self.lock.compare_and_swap(LOCK_FREE, tid as usize, Ordering::Relaxed);
-
-            // If compare_and_swap didn't return LOCK_FREE, we weren't the ones
-            // to set it, so go to sleep and spin.
-            if swap != LOCK_FREE {
-                // Go to sleep, wait for someone to unlock
-                let _ = futex::wait(&mut self.futex, 0);
-            }
-
-            // Otherwise we've got the mutex, time to return.
-            else {
-                break;
-            }
+        while !self.try_lock() {
+            // We didn't get the lock this time, wait for owner to unlock
+            let _ = futex::wait(&mut self.futex, 0);
         }
     }
 }
