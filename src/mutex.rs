@@ -10,6 +10,9 @@ pub struct Mutex {
     inner: UnsafeCell<MutexInner>
 }
 
+unsafe impl Send for Mutex {}
+unsafe impl Sync for Mutex {}
+
 struct MutexInner {
     lock: AtomicUsize,
     futex: i32
