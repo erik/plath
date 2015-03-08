@@ -1,8 +1,14 @@
+/// FIXME: TLS / Thread naming distinction needs to be resolved
+
 use libc;
+use std;
+
 use std::simd;
+use std::ptr::null_mut;
 
 use stack::Stack;
 use mutex::Mutex;
+use ffi;
 
 /// Get the offset in bytes of some particular struct member.
 ///
@@ -39,7 +45,6 @@ pub unsafe fn set_tls_mem<T>(offset: usize, expr: T) {
          : "r"(offset), "r"(expr)
          :: "volatile");
 }
-
 
 /// TCB (thread control block). We unfortunately need to match glibc here, so
 /// there's a ton of unused vars.
@@ -98,4 +103,13 @@ pub fn get_current_thread() -> &'static Thread {
     let thd = unsafe { &*thd_ptr };
 
     thd
+}
+
+
+/// Have the current thread voluntarily yield the rest of it's scheduled run
+/// time.
+pub fn yield_now() {
+    extern { fn sched_yield() -> libc::c_int; }
+
+    unsafe { sched_yield(); }
 }
