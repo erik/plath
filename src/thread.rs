@@ -73,23 +73,63 @@ pub struct Thread {
 
     // required by glibc
     _list: [*const libc::c_void; 2],
-
     /// This thread's id
     pub tid: libc::pid_t,
     /// This thread's parent pid
     pub pid: libc::pid_t,
-
     /// more glibc requirements
     /// TODO: find exact size
     _padding: [*const libc::c_void; 10],
 
     pub stack: *const Stack,
     pub magic: usize,
-    pub mutex: Mutex,
+    pub mutex: Mutex
+}
+
+/// TODO: joinhandle-esque
+pub fn spawn<F>(f: F) where F: Fn(), F: Sync + Send {
+    let stack = Stack::new();
+    let mut thd = stack.install_thread_block();
+
+    // Make sure thread doesn't start until we're ready
+    thd.mutex.lock();
+
+    unsafe {
+        ffi::clone(run_thread,
+                   stack.stack_top,
+                   ffi::clone::flags::COMMON,
+                   &f as *const _ as *mut libc::c_void,
+                   &mut thd.pid,
+                   null_mut(),
+                   &mut thd.tid)
+    };
+
+    thd.mutex.unlock();
 }
 
 
-pub fn get_current_thread() -> &'static Thread {
+extern fn run_thread(arg: *mut libc::c_void) -> libc::c_int {
+    let mut thd = get_current_thread();
+
+    println!("thread started");
+
+    // Synchronize with caller
+    thd.mutex.lock();
+
+    // Now we can run
+    unsafe {
+        println!("okay, time to run thd function");
+        let thd_fn: *const &Fn() = std::mem::transmute(arg);
+        (*thd_fn)();
+    }
+
+    thd.mutex.unlock();
+
+    0
+}
+
+
+pub fn get_current_thread() -> &'static mut Thread {
     let thread_offset = offset_of!(TcbHead, thread_self);
 
     let thd_ptr: *mut Thread = unsafe { get_tls_mem(thread_offset) };
@@ -97,9 +137,7 @@ pub fn get_current_thread() -> &'static Thread {
         panic!("TLS thread return NULL");
     }
 
-    let thd = unsafe { &*thd_ptr };
-
-    thd
+    unsafe { &mut *thd_ptr }
 }
 
 
@@ -109,4 +147,16 @@ pub fn yield_now() {
     extern { fn sched_yield() -> libc::c_int; }
 
     unsafe { sched_yield(); }
+}
+
+
+#[test]
+fn test_sanity() {
+    spawn(move || {
+        println!("hi, i'm a thread");
+        loop{}
+    });
+
+    println!("hello i am a parrent");
+    loop {}
 }

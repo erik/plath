@@ -8,7 +8,7 @@ pub mod flags {
     use libc::c_int;
 
     /// This is how we'll be calling clone for threading purposes.
-    pub const COMMON: c_int = VM | FS | FILES | SIGHAND | THREAD | // SETTLS |
+    pub const COMMON: c_int = VM | FS | FILES | SIGHAND | THREAD | SETTLS |
                               PARENT_SETTID | CHILD_CLEARTID | SYSVSEM;
 
     /// Set if VM shared between processes.
