@@ -2,7 +2,11 @@
 
 use libc;
 
+use std;
 use std::simd;
+use std::ptr::null_mut;
+
+use ffi;
 
 use stack::Stack;
 use mutex::Mutex;
