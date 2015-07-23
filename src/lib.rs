@@ -1,4 +1,4 @@
-#![feature(asm, core, libc)]
+#![feature(asm, libc, core_simd)]
 #![allow(dead_code, raw_pointer_derive)]
 
 // We only work on 64 bit linux

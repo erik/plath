@@ -1,14 +1,11 @@
 /// FIXME: TLS / Thread naming distinction needs to be resolved
 
 use libc;
-use std;
 
 use std::simd;
-use std::ptr::null_mut;
 
 use stack::Stack;
 use mutex::Mutex;
-use ffi;
 
 /// Get the offset in bytes of some particular struct member.
 ///
